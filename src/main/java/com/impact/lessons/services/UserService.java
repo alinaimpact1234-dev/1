@@ -19,4 +19,14 @@ public class UserService {
     public Optional<User> GetUserById(Long id){ 
         return store.findById(id); 
     }
+    public Optional<User> UpdateUser(Long id, User user){
+        User updatedUser = new User(user.getUsername(), user.getEmail(), user.getPassword(), user.getRole());
+        return store.update(id, updatedUser);
+    }
+    public Optional<User> UpdatePassword(Long id, String newPassword){
+        return store.updatePassword(id, newPassword);
+    }
+    public Optional<Boolean> disableUser(Long id){
+        return store.updateEnabled(id, false);
+    }
 }

@@ -35,4 +35,14 @@ public class User {
     public int getRole() {
         return role;
     }
+
+    public void setPassword(String password) {
+        this.password = password;
+    }
+    public void setEnabled(boolean enabled) {
+        this.enabled = enabled;
+    }
+    public boolean getEnabled() {
+        return enabled;
+    }
 }
