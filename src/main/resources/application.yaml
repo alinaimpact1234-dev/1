@@ -1,3 +1,17 @@
 spring:
   application:
     name: lessons
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/test
+    username: postgres
+    password: Invata2007
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+
+  sql:
+    init:
+      mode: always

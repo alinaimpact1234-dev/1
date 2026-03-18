@@ -1,4 +1,4 @@
-package com.impact.lessons.controllers;
+package com.impact.lessons.controllers;/*package com.impact.lessons.controllers;
 
 import com.impact.lessons.dto.UpdatePasswordRequest;
 import com.impact.lessons.models.User;
@@ -38,4 +38,33 @@ public class UserController {
         return userService.disableUser(id).map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
 
     }
+}
+*/
+
+import com.impact.lessons.dto.CreateUserRequest;
+import com.impact.lessons.dto.UserResponse;
+import com.impact.lessons.services.UserService;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@RestController
+@RequestMapping("/users")
+public class UserController {
+
+    private final UserService userService;
+
+    public UserController(UserService userService) {
+        this.userService = userService;
+    }
+
+    @PostMapping("/create")
+    public void createUser(@RequestBody CreateUserRequest request) {
+        userService.createUser(request);
+    }
+    @GetMapping("/get_all")
+    public List<UserResponse> getAllUsers() {
+        return userService.getAllUsers();
+    }
+
 }

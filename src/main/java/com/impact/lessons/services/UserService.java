@@ -1,32 +1,72 @@
 package com.impact.lessons.services;
 
-import com.impact.lessons.database.UserStore;
-import com.impact.lessons.models.User;
+import com.impact.lessons.dto.CreateUserRequest;
+import com.impact.lessons.dto.UserResponse;
+import com.impact.lessons.entity.User;
+import com.impact.lessons.entity.UserCredentials;
+import com.impact.lessons.entity.UserPersonalData;
+import com.impact.lessons.repository.CredentialsRepository;
+import com.impact.lessons.repository.UserPersonalDataRepository;
+import com.impact.lessons.repository.UserRepository;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.Optional;
 
+@Service
 public class UserService {
-    private UserStore store = new UserStore();
-    public User CreateUser(User user){
-        User newUser = new User(user.getUsername(), user.getEmail(), user.getPassword(), user.getRole());
-        return store.save(newUser);
 
+    private final UserRepository userRepository;
+    private final CredentialsRepository credentialsRepository;
+    private final UserPersonalDataRepository personalDataRepository;
+
+    public UserService(UserRepository userRepository,
+                       CredentialsRepository credentialsRepository,
+                       UserPersonalDataRepository personalDataRepository) {
+        this.userRepository = userRepository;
+        this.credentialsRepository = credentialsRepository;
+        this.personalDataRepository = personalDataRepository;
     }
-    public List<User> GetAllUsers(){
-        return store.findAll();
+
+    @Transactional
+    public void createUser(CreateUserRequest request) {
+        User user = new User();
+        userRepository.save(user);
+
+        UserCredentials credentials = new UserCredentials();
+        credentials.setUser(user);
+        credentials.setUsername(request.getUsername());
+        credentials.setPasswordHash(request.getPassword());
+        credentialsRepository.save(credentials);
+
+        UserPersonalData personalData = new UserPersonalData();
+        personalData.setUser(user);
+        personalData.setFirstName(request.getFirstName());
+        personalData.setLastName(request.getLastName());
+        personalData.setBirthDate(request.getBirthDate());
+        personalDataRepository.save(personalData);
     }
-    public Optional<User> GetUserById(Long id){ 
-        return store.findById(id); 
-    }
-    public Optional<User> UpdateUser(Long id, User user){
-        User updatedUser = new User(user.getUsername(), user.getEmail(), user.getPassword(), user.getRole());
-        return store.update(id, updatedUser);
-    }
-    public Optional<User> UpdatePassword(Long id, String newPassword){
-        return store.updatePassword(id, newPassword);
-    }
-    public Optional<Boolean> disableUser(Long id){
-        return store.updateEnabled(id, false);
+
+    public List<UserResponse> getAllUsers() {
+        List<User> users = userRepository.findAll();
+
+        return users.stream().map(user -> {
+            UserPersonalData personal = personalDataRepository.findById(user.getId()).orElse(null);
+            UserCredentials credentials = credentialsRepository.findById(user.getId()).orElse(null);
+
+            UserResponse response = new UserResponse();
+            response.setId(user.getId());
+
+            if (personal != null) {
+                response.setFirstName(personal.getFirstName());
+                response.setLastName(personal.getLastName());
+            }
+
+            if (credentials != null) {
+                response.setUsername(credentials.getUsername());
+            }
+
+            return response;
+        }).toList();
     }
 }
