@@ -1,5 +1,5 @@
 package com.impact.lessons.services;
-
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import com.impact.lessons.dto.UpdateUserPersonalData;
 import com.impact.lessons.repository.UserEmailRepository;
@@ -24,7 +24,7 @@ import java.util.List;
 @Service
 public class UserService {
     private final UserEmailRepository userEmailRepository;
-
+    private final PasswordEncoder passwordEncoder;
 
     private final UserRepository userRepository;
     private final CredentialsRepository credentialsRepository;
@@ -34,9 +34,10 @@ public class UserService {
     public UserService(UserRepository userRepository,
                        CredentialsRepository credentialsRepository,
                        UserPersonalDataRepository personalDataRepository,
-                       UserEmailRepository userEmailRepository) {
+                       UserEmailRepository userEmailRepository,PasswordEncoder passwordEncoder
+    ) {
 
-
+        this.passwordEncoder = passwordEncoder;
         this.userRepository = userRepository;
         this.credentialsRepository = credentialsRepository;
         this.personalDataRepository = personalDataRepository;
@@ -85,7 +86,9 @@ public class UserService {
         UserCredentials credentials = new UserCredentials();
         credentials.setUser(user);
         credentials.setUsername(request.getUsername());
-        credentials.setPasswordHash(request.getPassword());
+        String hashedPassword = passwordEncoder.encode(request.getPassword());
+        credentials.setPasswordHash(hashedPassword);
+
         credentialsRepository.save(credentials);
 
 

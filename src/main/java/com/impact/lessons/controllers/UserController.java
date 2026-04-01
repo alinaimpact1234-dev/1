@@ -89,7 +89,6 @@ public class UserController {
     public UserResponse GetUserByID(@RequestParam Long id) {
         return userService.getUserById(id);
     }
-
-
-
 }
+
+
