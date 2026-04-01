@@ -41,8 +41,7 @@ public class UserController {
 }
 */
 
-import com.impact.lessons.dto.CreateUserRequest;
-import com.impact.lessons.dto.UserResponse;
+import com.impact.lessons.dto.*;
 import com.impact.lessons.services.UserService;
 import org.springframework.web.bind.annotation.*;
 
@@ -66,5 +65,31 @@ public class UserController {
     public List<UserResponse> getAllUsers() {
         return userService.getAllUsers();
     }
+
+    @PostMapping("/email/set")
+    public void setEmail(@RequestBody SetEmailRequest email) {
+        userService.setEmailUser(email);
+    }
+    @PutMapping("/update/{id}")
+    public void UpdateUser(
+            @PathVariable Long id,
+            @RequestBody UpdateUserPersonalData user
+    ) {
+        userService.setPersonalData(id, user);
+    }
+    @PatchMapping("/update/birthDate/{id}")
+    public void updateBirthDate(
+            @PathVariable Long id,
+            @RequestBody UpdateBirthDateRequest birthDate
+    ) {
+        userService.setBirthDate(id, birthDate.getBirthDate());
+
+    }
+    @GetMapping("/get_by_id")
+    public UserResponse GetUserByID(@RequestParam Long id) {
+        return userService.getUserById(id);
+    }
+
+
 
 }

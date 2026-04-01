@@ -1,5 +1,5 @@
 package com.impact.lessons.entity;
-
+import java.util.List;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -22,5 +22,7 @@ public class User {
 
     @OneToOne(mappedBy = "user")
     private UserStatus status;
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
+    private List<UserEmail> emails;
 
 }
