@@ -1,11 +1,9 @@
 package com.impact.lessons.services;
+import com.impact.lessons.config.JwtService;
+import com.impact.lessons.dto.*;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
-import com.impact.lessons.dto.UpdateUserPersonalData;
 import com.impact.lessons.repository.UserEmailRepository;
-import com.impact.lessons.dto.CreateUserRequest;
-import com.impact.lessons.dto.SetEmailRequest;
-import com.impact.lessons.dto.UserResponse;
 import com.impact.lessons.entity.User;
 import com.impact.lessons.entity.UserCredentials;
 import com.impact.lessons.entity.UserEmail;
@@ -25,7 +23,7 @@ import java.util.List;
 public class UserService {
     private final UserEmailRepository userEmailRepository;
     private final PasswordEncoder passwordEncoder;
-
+    private final JwtService jwtService;
     private final UserRepository userRepository;
     private final CredentialsRepository credentialsRepository;
     private final UserPersonalDataRepository personalDataRepository;
@@ -34,9 +32,10 @@ public class UserService {
     public UserService(UserRepository userRepository,
                        CredentialsRepository credentialsRepository,
                        UserPersonalDataRepository personalDataRepository,
-                       UserEmailRepository userEmailRepository,PasswordEncoder passwordEncoder
+                       UserEmailRepository userEmailRepository,PasswordEncoder passwordEncoder,
+                       JwtService jwtService
     ) {
-
+        this.jwtService = jwtService;
         this.passwordEncoder = passwordEncoder;
         this.userRepository = userRepository;
         this.credentialsRepository = credentialsRepository;
@@ -146,19 +145,10 @@ public class UserService {
 
     public UserResponse getUserById(Long id) {
 
-
         User user = userRepository.findById(id).orElseThrow(() -> new RuntimeException("User not found"));
-
-
         UserPersonalData personal = personalDataRepository.findById(user.getId()).orElse(null);
-
-
         UserCredentials credentials = credentialsRepository.findById(user.getId()).orElse(null);
-
-
         UserResponse response = new UserResponse();
-
-
         response.setId(user.getId());
 
 
@@ -171,6 +161,30 @@ public class UserService {
             response.setUsername(credentials.getUsername());
         }
         return response;
+    }
+    public LoginResponse login(LoginRequest request) {
+
+        UserCredentials credentials = credentialsRepository
+                .findByUsername(request.getUsername())
+                .orElseThrow(() -> new RuntimeException("Invalid credentials"));
+
+        boolean matches = passwordEncoder.matches(
+                request.getPassword(),
+                credentials.getPasswordHash()
+        );
+
+        if (!matches) {
+            throw new RuntimeException("Invalid credentials");
+        }
+        String accessToken = jwtService.generateAccessToken(
+                credentials.getUsername()
+        );
+
+        String refreshToken = jwtService.generateRefreshToken(
+                credentials.getUsername()
+        );
+
+        return new LoginResponse(accessToken, refreshToken);
     }
 
 
