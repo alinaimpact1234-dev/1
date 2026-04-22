@@ -1,5 +1,7 @@
 package com.impact.lessons.config;
 
+import com.impact.lessons.entity.UserPersonalData;
+import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.stereotype.Service;
@@ -11,14 +13,22 @@ public class JwtService {
 
     private final String SECRET = "very_secret_key_very_secret_key_12345";
 
-    public String generateAccessToken(String username) {
+    public String generateAccessToken(String username,
+                                      String role,
+                                      UserPersonalData personalData) {
         return Jwts.builder()
-                .subject(username)
+                .setSubject(username)
+                .claim("userId", personalData.getUserId())
+                .claim("role", role)
+                .claim("firstName", personalData.getFirstName())
+                .claim("lastName", personalData.getFirstName())
+                .claim("BirthDate", personalData.getBirthDate().toString())
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + 1000 * 60 * 15))
                 .signWith(Keys.hmacShaKeyFor(SECRET.getBytes()))
                 .compact();
     }
+
 
     public String generateRefreshToken(String username) {
         return Jwts.builder()
@@ -45,6 +55,9 @@ public class JwtService {
                     .build()
                     .parseSignedClaims(token);
             return true;
+        } catch (ExpiredJwtException e) {
+
+            return false;
         } catch (Exception e) {
             return false;
         }

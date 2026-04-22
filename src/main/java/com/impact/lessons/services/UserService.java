@@ -1,46 +1,49 @@
 package com.impact.lessons.services;
 import com.impact.lessons.config.JwtService;
 import com.impact.lessons.dto.*;
+import com.impact.lessons.entity.*;
+import com.impact.lessons.repository.*;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
-import com.impact.lessons.repository.UserEmailRepository;
-import com.impact.lessons.entity.User;
-import com.impact.lessons.entity.UserCredentials;
-import com.impact.lessons.entity.UserEmail;
-import com.impact.lessons.entity.UserPersonalData;
-import com.impact.lessons.repository.CredentialsRepository;
-import com.impact.lessons.repository.UserPersonalDataRepository;
-import com.impact.lessons.repository.UserRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 
 @Service
 public class UserService {
+    private final RoleRepository roleRepository;
+    private final UserRoleRepository userRoleRepository;
     private final UserEmailRepository userEmailRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final UserRepository userRepository;
     private final CredentialsRepository credentialsRepository;
     private final UserPersonalDataRepository personalDataRepository;
-
+    private final RefreshTokenRepository refreshTokenRepository;
 
     public UserService(UserRepository userRepository,
                        CredentialsRepository credentialsRepository,
                        UserPersonalDataRepository personalDataRepository,
                        UserEmailRepository userEmailRepository,PasswordEncoder passwordEncoder,
-                       JwtService jwtService
+                       JwtService jwtService, RefreshTokenRepository refreshTokenRepository,
+                       RoleRepository roleRepository,
+                       UserRoleRepository userRoleRepository
+
     ) {
+        this.roleRepository = roleRepository;
+        this.userRoleRepository = userRoleRepository;
         this.jwtService = jwtService;
         this.passwordEncoder = passwordEncoder;
         this.userRepository = userRepository;
         this.credentialsRepository = credentialsRepository;
         this.personalDataRepository = personalDataRepository;
-        this.userEmailRepository = userEmailRepository;
+        this.userEmailRepository = userEmailRepository;this.refreshTokenRepository = refreshTokenRepository;
+
+
+
     }
     @Transactional
     public void setPersonalData( Long id, UpdateUserPersonalData data){
@@ -164,10 +167,12 @@ public class UserService {
     }
     public LoginResponse login(LoginRequest request) {
 
+        // 1. Luăm credentials din DB
         UserCredentials credentials = credentialsRepository
                 .findByUsername(request.getUsername())
                 .orElseThrow(() -> new RuntimeException("Invalid credentials"));
 
+        // 2. Verificăm parola
         boolean matches = passwordEncoder.matches(
                 request.getPassword(),
                 credentials.getPasswordHash()
@@ -176,16 +181,96 @@ public class UserService {
         if (!matches) {
             throw new RuntimeException("Invalid credentials");
         }
+
+        // 3. Luăm user
+        User user = credentials.getUser();
+
+        // 4. Luăm personal data
+        UserPersonalData personalData = personalDataRepository
+                .findById(user.getId())
+                .orElseThrow(() -> new RuntimeException("Personal data not found"));
+
+        // 5. Luăm role
+        UserRole userRole = userRoleRepository
+                .findByUserId(user.getId())
+                .orElseThrow(() -> new RuntimeException("Role data not found"));
+
+        Role role = roleRepository
+                .findById(userRole.getRoleId())
+                .orElseThrow(() -> new RuntimeException("Role not found"));
+
+        // 6. Generăm token CU DATE COMPLETE
         String accessToken = jwtService.generateAccessToken(
-                credentials.getUsername()
+                credentials.getUsername(),
+                role.getName(),
+                personalData
         );
 
+        // refresh token rămâne la fel
         String refreshToken = jwtService.generateRefreshToken(
                 credentials.getUsername()
         );
 
+        RefreshToken RTK = new RefreshToken();
+        RTK.setUser(user);
+        RTK.setToken(refreshToken);
+        RTK.setExpiresAt(LocalDateTime.now().plusDays(7));
+        refreshTokenRepository.save(RTK);
+
         return new LoginResponse(accessToken, refreshToken);
     }
+    public LoginResponse refresh(RefreshRequest request) {
+
+        boolean accessValid = jwtService.isTokenValid(request.getAccessToken());
+        if (accessValid) {
+            throw new RuntimeException("Access token not expired yet");
+        }
+
+        RefreshToken storedToken = refreshTokenRepository
+                .findByToken(request.getRefreshToken())
+                .orElseThrow(() -> new RuntimeException("Invalid refresh token"));
+        if (storedToken.getExpiresAt().isBefore(LocalDateTime.now())) {
+            refreshTokenRepository.delete(storedToken);
+            throw new RuntimeException("Refresh token expired");
+        }
+
+        String username = jwtService.extractUsername(request.getRefreshToken());
+        refreshTokenRepository.delete(storedToken);
+
+        UserCredentials credentials = credentialsRepository
+                .findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        User user = credentials.getUser();
+
+        UserPersonalData personalData = personalDataRepository
+                .findById(user.getId())
+                .orElseThrow(() -> new RuntimeException("Personal data not found"));
+
+        UserRole userRole = userRoleRepository
+                .findByUserId(user.getId())
+                .orElseThrow(() -> new RuntimeException("Role data not found"));
+
+        Role role = roleRepository
+                .findById(userRole.getRoleId())
+                .orElseThrow(() -> new RuntimeException("Role not found"));
+
+        String newAccessToken = jwtService.generateAccessToken(
+                username,
+                role.getName(),
+                personalData
+        );
+
+        String newRefreshToken = jwtService.generateRefreshToken(username);
+        RefreshToken newToken = new RefreshToken();
+        newToken.setUser(storedToken.getUser());
+        newToken.setToken(newRefreshToken);
+        newToken.setExpiresAt(LocalDateTime.now().plusDays(7));
+        refreshTokenRepository.save(newToken);
+
+        return new LoginResponse(newAccessToken, newRefreshToken);
+    }
+
 
 
 

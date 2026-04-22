@@ -89,6 +89,11 @@ public class UserController {
     public UserResponse GetUserByID(@RequestParam Long id) {
         return userService.getUserById(id);
     }
+    @PostMapping("/refresh")
+    public LoginResponse refresh(@RequestBody RefreshRequest request) {
+        return userService.refresh(request);
+    }
+
 }
 
 
