@@ -2,6 +2,8 @@ package com.impact.lessons.services;
 import com.impact.lessons.config.JwtService;
 import com.impact.lessons.dto.*;
 import com.impact.lessons.entity.*;
+import com.impact.lessons.exception.ApiException;
+import com.impact.lessons.exception.ErrorCode;
 import com.impact.lessons.repository.*;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
@@ -167,10 +169,12 @@ public class UserService {
     }
     public LoginResponse login(LoginRequest request) {
 
-        // 1. Luăm credentials din DB
         UserCredentials credentials = credentialsRepository
                 .findByUsername(request.getUsername())
-                .orElseThrow(() -> new RuntimeException("Invalid credentials"));
+                .orElseThrow(() -> new ApiException(
+                        ErrorCode.USER_NOT_FOUND.getMessage(),
+                        ErrorCode.USER_NOT_FOUND.getCode()
+                ));
 
         // 2. Verificăm parola
         boolean matches = passwordEncoder.matches(
