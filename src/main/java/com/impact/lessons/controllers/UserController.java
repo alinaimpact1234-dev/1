@@ -62,8 +62,8 @@ public class UserController {
         userService.createUser(request);
     }
     @GetMapping("/get_all")
-    public List<UserResponse> getAllUsers() {
-        return userService.getAllUsers();
+    public UserListResponse getAllUsers() { // 1.
+        return userService.getAllUsers();   // 2.
     }
 
     @PostMapping("/email/set")

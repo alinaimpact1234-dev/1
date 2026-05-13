@@ -1,5 +1,6 @@
 package com.impact.lessons.controllers;
 
+import com.impact.lessons.dto.UserListResponse;
 import com.impact.lessons.dto.UserResponse;
 import com.impact.lessons.services.UserService;
 import org.springframework.web.bind.annotation.*;
@@ -17,7 +18,7 @@ public class AdminController {
     }
 
     @GetMapping("/users/get_all")
-    public List<UserResponse> getAllUsers() {
+    public UserListResponse getAllUsers() {
         return userService.getAllUsers();
     }
 }

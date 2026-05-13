@@ -104,35 +104,31 @@ public class UserService {
         personalDataRepository.save(personalData);
     }
 
-
-    public List<UserResponse> getAllUsers() {
+    @org.springframework.cache.annotation.Cacheable(value = "users")
+    public UserListResponse getAllUsers() {
         List<User> users = userRepository.findAll();
 
-
-        return users.stream().map(user -> {
+        List<UserResponse> list = users.stream().map(user -> {
             UserPersonalData personal = personalDataRepository.findById(user.getId()).orElse(null);
             UserCredentials credentials = credentialsRepository.findById(user.getId()).orElse(null);
 
-
             UserResponse response = new UserResponse();
             response.setId(user.getId());
-
 
             if (personal != null) {
                 response.setFirstName(personal.getFirstName());
                 response.setLastName(personal.getLastName());
                 response.setBirthDate(personal.getBirthDate());
-
             }
-
 
             if (credentials != null) {
                 response.setUsername(credentials.getUsername());
             }
 
-
             return response;
         }).toList();
+
+        return new UserListResponse(list); // Acum return-ul se potrivește cu semnătura
     }
     public void setEmailUser(SetEmailRequest emailRequest){
         User user = userRepository.findById(emailRequest.getUserId())
