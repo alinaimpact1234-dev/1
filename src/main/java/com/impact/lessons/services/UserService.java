@@ -5,6 +5,8 @@ import com.impact.lessons.entity.*;
 import com.impact.lessons.exception.ApiException;
 import com.impact.lessons.exception.ErrorCode;
 import com.impact.lessons.repository.*;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import org.springframework.stereotype.Service;
@@ -47,6 +49,13 @@ public class UserService {
 
 
     }
+    @Caching(evict = {
+            // 1. Șterge lista globală (pentru că s-a schimbat un nume în ea)
+            @CacheEvict(value = "users", allEntries = true),
+
+            // 2. Șterge și fișa specifică a acestui user (identificat prin id)
+            @CacheEvict(value = "user_details", key = "#id")
+    })
     @Transactional
     public void setPersonalData( Long id, UpdateUserPersonalData data){
         User user = userRepository.findById(id)
@@ -65,7 +74,12 @@ public class UserService {
 
         personalDataRepository.save(personalData);
     }
-
+    @Caching(evict = {
+            // Șterge lista globală (pentru că un nume/dată din listă s-a schimbat)
+            @CacheEvict(value = "users", allEntries = true),
+            // Șterge doar user-ul specific din cache-ul de detalii
+            @CacheEvict(value = "user_details", key = "#id")
+    })
     @Transactional
     public void setBirthDate(Long id, LocalDate birthDate){
         User user = userRepository.findById(id)
@@ -80,12 +94,19 @@ public class UserService {
         personalDataRepository.save(personalData);
     }
 
-
+    @CacheEvict(value = "users", allEntries = true)
     @Transactional
     public void createUser(CreateUserRequest request) {
         User user = new User();
-        userRepository.save(user);
 
+        user.setUsername(request.getUsername()); // Corespunde coloanei 'username' NOT NULL
+        user.setEmail(request.getEmail());
+        // Criptezi parola o singură dată
+        String encodedPassword = passwordEncoder.encode(request.getPassword());
+
+        // O setezi pe user (pentru tabela 'users')
+        user.setPasswordHash(encodedPassword);
+        userRepository.save(user);
 
         UserCredentials credentials = new UserCredentials();
         credentials.setUser(user);
@@ -130,6 +151,12 @@ public class UserService {
 
         return new UserListResponse(list); // Acum return-ul se potrivește cu semnătura
     }
+    @Caching(evict = {
+            // 1. Ștergem lista mare pentru că s-a schimbat o informație
+            @CacheEvict(value = "users", allEntries = true),
+            // 2. Ștergem fișa specifică a user-ului (folosind ID-ul din obiectul request)
+            @CacheEvict(value = "user_details", key = "#emailRequest.userId")
+    })
     public void setEmailUser(SetEmailRequest emailRequest){
         User user = userRepository.findById(emailRequest.getUserId())
                 .orElseThrow(() -> new RuntimeException("User not found"));
@@ -143,7 +170,7 @@ public class UserService {
 
         userEmailRepository.save(email);
     }
-
+    @org.springframework.cache.annotation.Cacheable(value = "user_details", key = "#id")
     public UserResponse getUserById(Long id) {
 
         User user = userRepository.findById(id).orElseThrow(() -> new RuntimeException("User not found"));

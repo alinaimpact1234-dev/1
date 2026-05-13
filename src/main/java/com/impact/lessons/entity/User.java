@@ -13,7 +13,13 @@ public class User {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+    @Column(nullable = false, unique = true)
+    private String username;
 
+    @Column(nullable = false, unique = true)
+    private String email;
+    @Column(name = "password_hash", nullable = false) // ADAUGĂ ACEASTA
+    private String passwordHash;
     @OneToOne(mappedBy = "user")
     private UserCredentials credentials;
 
