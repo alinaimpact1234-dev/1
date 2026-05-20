@@ -29,20 +29,35 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 
         http
+                // 1. Dezactivăm CSRF și setăm sesiunea pe STATELESS (standard pentru JWT)
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
+
+                // 2. Un singur bloc de autorizare cu TOATE rutele ordonate corect
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/users/create").permitAll()
+                        // Rutele publice pentru Swagger / OpenAPI
+                        .requestMatchers(
+                                "/v3/api-docs/**",
+                                "/swagger-ui/**",
+                                "/swagger-ui.html"
+                        ).permitAll()
+
+                        // Rutele publice pentru autentificare și crearea utilizatorilor
                         .requestMatchers("/auth/**").permitAll()
+                        .requestMatchers("/users/create").permitAll()
+
+                        // Rutele restricționate în funcție de roluri
                         .requestMatchers("/admin/**").hasRole("ADMIN")
                         .requestMatchers("/content/**").hasAnyRole("ADMIN", "AUTHOR", "EDITOR")
 
+                        // Regula universală - OBLIGATORIU ULTIMA LINIE
                         .anyRequest().authenticated()
                 )
-                .addFilterBefore(jwtAuthFilter,
-                        UsernamePasswordAuthenticationFilter.class);
+
+                // 3. Adăugarea filtrului JWT înainte de cel standard
+                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
